@@ -1,18 +1,17 @@
 FROM node:20-slim AS base
 WORKDIR /app
 
-FROM base AS deps
+FROM base AS build
+ENV NODE_ENV=development
 COPY package.json package-lock.json ./
-RUN npm ci --include=dev
-
-FROM deps AS build
+RUN npm ci
 COPY . .
 RUN npm run build
 
 FROM base AS runner
 ENV NODE_ENV=production
-COPY --from=deps /app/node_modules ./node_modules
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev
 COPY --from=build /app/dist ./dist
-COPY package.json ./
 EXPOSE 3000
 CMD ["node", "dist/boot.js"]
