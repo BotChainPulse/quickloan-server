@@ -49392,11 +49392,45 @@ async function createContext(opts) {
   return ctx;
 }
 
+// api/lender-login.ts
+async function lenderLoginHandler(c) {
+  let pin = "";
+  try {
+    const body = await c.req.json();
+    pin = String(body?.pin ?? "");
+  } catch {
+    return c.json({ error: "Bad request" }, 400);
+  }
+  const expected = process.env.LENDER_PIN ?? "";
+  if (!expected) {
+    return c.json({ error: "LENDER_PIN not configured on server" }, 500);
+  }
+  if (!pin || pin !== expected) {
+    return c.json({ error: "Wrong PIN" }, 401);
+  }
+  await upsertUser({
+    unionId: env.ownerUnionId || "lender",
+    name: "Lender",
+    lastSignInAt: /* @__PURE__ */ new Date()
+  });
+  const token = await signSessionToken({
+    unionId: env.ownerUnionId || "lender",
+    clientId: env.appId
+  });
+  const cookieOpts = getSessionCookieOptions(c.req.raw.headers);
+  setCookie(c, Session.cookieName, token, {
+    ...cookieOpts,
+    maxAge: Session.maxAgeMs / 1e3
+  });
+  return c.json({ ok: true });
+}
+
 // api/boot.ts
 var app = new Hono2();
 app.use(bodyLimit({ maxSize: 50 * 1024 * 1024 }));
 app.use("/api/trpc/*", cors({ origin: "*", allowMethods: ["GET", "POST", "OPTIONS"] }));
 app.get(Paths.oauthCallback, createOAuthCallbackHandler());
+app.post("/api/lender-login", lenderLoginHandler);
 app.use("/api/trpc/*", async (c) => {
   return fetchRequestHandler({
     endpoint: "/api/trpc",

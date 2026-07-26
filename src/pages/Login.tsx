@@ -1,38 +1,58 @@
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-
-function getOAuthUrl() {
-  const kimiAuthUrl = import.meta.env.VITE_KIMI_AUTH_URL;
-  const appID = import.meta.env.VITE_APP_ID;
-  const redirectUri = `${window.location.origin}/api/oauth/callback`;
-  const state = btoa(redirectUri);
-
-  const url = new URL(`${kimiAuthUrl}/api/oauth/authorize`);
-  url.searchParams.set("client_id", appID);
-  url.searchParams.set("redirect_uri", redirectUri);
-  url.searchParams.set("response_type", "code");
-  url.searchParams.set("scope", "profile");
-  url.searchParams.set("state", state);
-
-  return url.toString();
-}
+import { Input } from "@/components/ui/input";
 
 export default function Login() {
+  const [pin, setPin] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function submit() {
+    setBusy(true);
+    setError("");
+    try {
+      const resp = await fetch("/api/lender-login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pin }),
+      });
+      if (resp.ok) {
+        window.location.href = "/";
+        return;
+      }
+      const data = await resp.json().catch(() => ({}));
+      setError(data.error || "Login failed");
+    } catch {
+      setError("Network error — check your connection");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
-    <div className="min-h-screen flex items-center justify-center">
+    <div className="min-h-screen flex items-center justify-center bg-background">
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
-          <CardTitle>Welcome</CardTitle>
+          <CardTitle>QuickLoan Lender</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
+          <Input
+            type="password"
+            inputMode="numeric"
+            placeholder="Enter your lender PIN"
+            value={pin}
+            onChange={(e) => setPin(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && submit()}
+          />
+          {error && <p className="text-sm text-red-500">{error}</p>}
           <Button
             className="w-full"
             size="lg"
-            onClick={() => {
-              window.location.href = getOAuthUrl();
-            }}
+            disabled={busy || !pin}
+            onClick={submit}
           >
-            Sign in with Kimi
+            {busy ? "Signing in…" : "Sign in"}
           </Button>
         </CardContent>
       </Card>
