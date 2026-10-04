@@ -5,6 +5,7 @@ import Dashboard from "./pages/Dashboard";
 import AuthLayout from "./components/AuthLayout";
 import { useAuth } from "./hooks/useAuth";
 import { LOGIN_PATH } from "./const";
+import Pilot from "./pages/Pilot";
 
 function Protected({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -17,7 +18,8 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
-      <Route path="/" element={<Protected><Dashboard /></Protected>} />
+      <Route path="/" element={<Pilot />} />
+      <Route path="/dashboard" element={<Protected><Dashboard /></Protected>} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

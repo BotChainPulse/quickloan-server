@@ -7,7 +7,7 @@ node_modules
 *.db
 *.sqlite
 *.sqlite3
-db/migrations/*.sql
+# Versioned migration SQL must be committed; do not ignore it.
 # TypeScript cache
 *.tsbuildinfo
 # Build outputs

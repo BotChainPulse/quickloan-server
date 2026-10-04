@@ -1,6 +1,14 @@
-FROM node:20-slim
+FROM node:22-slim AS builder
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+
+FROM node:22-slim
 WORKDIR /app
 ENV NODE_ENV=production
-COPY dist ./dist
+COPY --from=builder /app/dist ./dist
+USER node
 EXPOSE 3000
 CMD ["node", "dist/boot.js"]

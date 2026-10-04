@@ -52,6 +52,7 @@ export default function Dashboard() {
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-bold">🏦 QuickLoan — Lender Dashboard</h1>
+      <p className="rounded-lg border p-3 text-sm">Pilot preparation: approval records a review decision only. New applications, loan agreements and disbursements are not enabled.</p>
       <p className="text-xs text-muted-foreground select-all">Server: {typeof window !== "undefined" ? window.location.origin : ""}</p>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -68,7 +69,7 @@ export default function Dashboard() {
           <div className="text-2xl font-bold text-red-500">{stats.data?.rejected ?? "—"}</div>
         </CardContent></Card>
         <Card><CardContent className="pt-4">
-          <div className="text-xs text-muted-foreground">Lent out</div>
+          <div className="text-xs text-muted-foreground">Approved applications — not disbursed</div>
           <div className="text-2xl font-bold">{stats.data ? fmt(stats.data.approvedVolume) : "—"}</div>
         </CardContent></Card>
       </div>
@@ -137,7 +138,7 @@ export default function Dashboard() {
 
             {d.status === "pending" && (
               <div className="space-y-2 border-t pt-3">
-                <Textarea placeholder="Note to applicant (optional) — e.g. disbursement details or reason"
+                <Textarea placeholder="Review note (visible to applicant; not a payment instruction)"
                   value={note} onChange={(e) => setNote(e.target.value)} />
                 <div className="flex gap-2">
                   <Button className="flex-1 bg-green-600 hover:bg-green-700"

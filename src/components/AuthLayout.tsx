@@ -28,7 +28,7 @@ import { AuthLayoutSkeleton } from "./AuthLayoutSkeleton";
 import { Button } from "./ui/button";
 
 const menuItems = [
-  { icon: LayoutDashboard, label: "Applications", path: "/" },
+  { icon: LayoutDashboard, label: "Applications", path: "/dashboard" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";

@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { createRouter, publicQuery, adminQuery } from "./middleware";
+import { createRouter, borrowerQuery, adminQuery, requireOwnedPhone } from "./middleware";
+import { TRPCError } from "@trpc/server";
 import { getDb } from "./queries/connection";
 import { applications, notifications } from "@db/schema";
 import { desc, eq, and, isNull } from "drizzle-orm";
@@ -7,8 +8,8 @@ import { desc, eq, and, isNull } from "drizzle-orm";
 const photoSchema = z.string().max(400_000).nullable().optional();
 
 export const quickloanRouter = createRouter({
-  // ── Borrower endpoints (public, keyed by phone) ──────────────────
-  submit: publicQuery
+  // Existing borrower records require verified phone ownership. New lending is closed.
+  submit: borrowerQuery
     .input(
       z.object({
         name: z.string().min(3).max(255),
@@ -30,22 +31,16 @@ export const quickloanRouter = createRouter({
         livenessPhoto: photoSchema,
       }),
     )
-    .mutation(async ({ input }) => {
-      const db = getDb();
-      const ref = "QL-" + Math.floor(100000 + Math.random() * 900000);
-      await db.insert(applications).values({ ...input, ref });
-      await db.insert(notifications).values({
-        phone: input.phone,
-        title: `Application received — ${ref}`,
-        body: `${input.name}, your loan application for UGX ${input.amount.toLocaleString()} was received and is now PENDING REVIEW. You will be notified when it is decided.`,
-      });
-      return { ref, status: "pending" as const };
+    .mutation(({ input, ctx }) => {
+      requireOwnedPhone(ctx, input.phone);
+      throw new TRPCError({ code: "SERVICE_UNAVAILABLE", message: "QuickLoan is in preparation. New applications are closed until lending safeguards and payments are verified." });
     }),
 
-  myApplications: publicQuery
+  myApplications: borrowerQuery
     .input(z.object({ phone: z.string().min(9).max(20) }))
-    .query(({ input }) =>
-      getDb()
+    .query(({ input, ctx }) => {
+      requireOwnedPhone(ctx, input.phone);
+      return getDb()
         .select({
           ref: applications.ref,
           amount: applications.amount,
@@ -58,22 +53,24 @@ export const quickloanRouter = createRouter({
         })
         .from(applications)
         .where(eq(applications.phone, input.phone))
-        .orderBy(desc(applications.createdAt)),
-    ),
+        .orderBy(desc(applications.createdAt));
+    }),
 
-  myNotifications: publicQuery
+  myNotifications: borrowerQuery
     .input(z.object({ phone: z.string().min(9).max(20) }))
-    .query(({ input }) =>
-      getDb()
+    .query(({ input, ctx }) => {
+      requireOwnedPhone(ctx, input.phone);
+      return getDb()
         .select()
         .from(notifications)
         .where(eq(notifications.phone, input.phone))
-        .orderBy(desc(notifications.createdAt)),
-    ),
+        .orderBy(desc(notifications.createdAt));
+    }),
 
-  unreadCount: publicQuery
+  unreadCount: borrowerQuery
     .input(z.object({ phone: z.string().min(9).max(20) }))
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
+      requireOwnedPhone(ctx, input.phone);
       const rows = await getDb()
         .select({ id: notifications.id })
         .from(notifications)
@@ -81,14 +78,15 @@ export const quickloanRouter = createRouter({
       return { count: rows.length };
     }),
 
-  markRead: publicQuery
+  markRead: borrowerQuery
     .input(z.object({ phone: z.string().min(9).max(20) }))
-    .mutation(({ input }) =>
-      getDb()
+    .mutation(({ input, ctx }) => {
+      requireOwnedPhone(ctx, input.phone);
+      return getDb()
         .update(notifications)
         .set({ readAt: new Date() })
-        .where(and(eq(notifications.phone, input.phone), isNull(notifications.readAt))),
-    ),
+        .where(and(eq(notifications.phone, input.phone), isNull(notifications.readAt)));
+    }),
 
   // ── Lender endpoints (admin only) ────────────────────────────────
   listApplications: adminQuery
@@ -122,32 +120,36 @@ export const quickloanRouter = createRouter({
   decide: adminQuery
     .input(
       z.object({
-        id: z.number(),
+        id: z.number().int().positive(),
         approved: z.boolean(),
         note: z.string().max(500).optional(),
       }),
     )
     .mutation(async ({ input }) => {
       const db = getDb();
-      const app = await db.query.applications.findFirst({
+      return db.transaction(async (tx) => {
+      const app = await tx.query.applications.findFirst({
         where: eq(applications.id, input.id),
       });
-      if (!app) throw new Error("Application not found");
+      if (!app) throw new TRPCError({ code: "NOT_FOUND", message: "Application not found" });
+      if (app.status !== "pending") throw new TRPCError({ code: "CONFLICT", message: "Application already decided" });
       const status = input.approved ? "approved" : "rejected";
-      await db
+      const [result] = await tx
         .update(applications)
         .set({ status, decisionNote: input.note ?? null, decidedAt: new Date() })
-        .where(eq(applications.id, input.id));
-      await db.insert(notifications).values({
+        .where(and(eq(applications.id, input.id), eq(applications.status, "pending")));
+      if (result.affectedRows !== 1) throw new TRPCError({ code: "CONFLICT", message: "Application already decided" });
+      await tx.insert(notifications).values({
         phone: app.phone,
         title: input.approved
-          ? `🎉 Loan APPROVED — ${app.ref}`
+          ? `Application review approved — ${app.ref}`
           : `Loan application update — ${app.ref}`,
         body: input.approved
-          ? `${app.name}, good news! Your loan of UGX ${app.amount.toLocaleString()} has been APPROVED. ${input.note ?? "You will receive the money on your mobile money number shortly."}`
-          : `${app.name}, unfortunately your loan application of UGX ${app.amount.toLocaleString()} was not approved this time. ${input.note ?? "You may apply again after 30 days."}`,
+          ? `Your application ${app.ref} passed this review step. This is not a loan agreement or confirmation that money has been sent. QuickLoan remains in pilot preparation; no disbursement is enabled.`
+          : `Your application ${app.ref} was not approved in this review. No money has been sent. Further applications are not open during pilot preparation.`,
       });
       return { ok: true, status };
+      });
     }),
 
   stats: adminQuery.query(async () => {
