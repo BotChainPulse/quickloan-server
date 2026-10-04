@@ -11,6 +11,12 @@ import { authConfig } from "./lib/managed-auth";
 
 const app = new Hono<{ Bindings: HttpBindings }>();
 
+app.use("/sw.js", async (c, next) => {
+  c.header("Cache-Control", "no-cache, no-store, must-revalidate");
+  c.header("X-Content-Type-Options", "nosniff");
+  await next();
+});
+
 app.use(bodyLimit({ maxSize: 2 * 1024 * 1024 }));
 
 // CORS is not authentication. Borrower requests require verified bearer tokens.

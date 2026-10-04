@@ -30,6 +30,23 @@ No existing application or notification rows are deleted or rewritten.
 
 ## Hosting choices
 
+### PWA and Cloudflare static preview
+
+The website now includes a standalone manifest, PNG installation icons, an Apple
+touch icon, a production-only service worker and browser-dependent install control.
+The service worker caches only the manifest, icons and standalone public offline
+page. It never caches live HTML, dashboard/login pages, API responses, account records,
+identity documents or payment data. No offline submission or background payments.
+
+Cloudflare Pages can build a static preview with `npm ci && npx vite build` and
+output directory `dist/public`. Use Node 22. The `_headers` and `_redirects` files
+are for Pages; Railway's Node server does not interpret them. HTTPS is provided by
+the host. An install prompt is browser-dependent, not guaranteed by a manifest alone.
+This static preview does NOT deploy the Node/MySQL backend. Authentication and
+dashboard operations require a separately configured API/Worker and Supabase setup.
+Do not point the production borrower app at a static-only preview.
+
+
 - Supabase provides Postgres, Auth, storage and functions. The existing backend
   uses MySQL/Drizzle mysql-core and cannot be pointed at a Postgres URL unchanged.
 - Neon provides Postgres; it is not an automatic replacement for the app server.

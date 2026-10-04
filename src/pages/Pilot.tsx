@@ -1,4 +1,5 @@
 import { Link } from "react-router";
+import InstallQuickLoan from "../components/InstallQuickLoan";
 
 export default function Pilot() {
   return <main className="min-h-screen bg-background px-5 py-16 text-foreground">
@@ -16,6 +17,7 @@ export default function Pilot() {
         <p>Existing records are restricted to verified account holders. An approved review is not proof of a transfer. The borrower app is being updated for secure sign-in.</p>
       </section>
       <Link to="/login" className="inline-block rounded-lg border px-5 py-3">Authorised lender sign-in</Link>
+      <InstallQuickLoan />
       <p className="text-sm text-muted-foreground">Pilot preparation — not affiliated with Botim or CashNow.</p>
     </div>
   </main>;
