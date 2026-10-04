@@ -4,6 +4,7 @@ import { TRPCError } from "@trpc/server";
 import { getDb } from "./queries/connection";
 import { applications, notifications } from "@db/schema";
 import { desc, eq, and, isNull } from "drizzle-orm";
+import { nextOfKinFields, validateNextOfKin } from "@contracts/next-of-kin";
 
 const photoSchema = z.string().max(400_000).nullable().optional();
 
@@ -23,13 +24,12 @@ export const quickloanRouter = createRouter({
         amount: z.number().int().min(20000).max(300000),
         durationWeeks: z.number().int().min(1).max(52),
         purpose: z.string().max(50).optional(),
-        kinName: z.string().max(255).optional(),
-        kinPhone: z.string().max(20).optional(),
+        ...nextOfKinFields,
         signature: z.string().max(255).optional(),
         idFrontPhoto: photoSchema,
         idBackPhoto: photoSchema,
         livenessPhoto: photoSchema,
-      }),
+      }).superRefine(validateNextOfKin),
     )
     .mutation(({ input, ctx }) => {
       requireOwnedPhone(ctx, input.phone);

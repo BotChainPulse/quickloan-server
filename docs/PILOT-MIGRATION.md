@@ -2,6 +2,24 @@
 
 ## Status and deployment impact
 
+### Three next-of-kin contacts
+
+New application payloads require kinName/kinPhone (contact 1), kinName2/kinPhone2
+(contact 2) and kinName3/kinPhone3 (contact 3). Full names and Uganda mobile numbers
+are required. Repeated names/numbers and the applicant's own name/number are rejected.
+Number formatting is normalised to +2567XXXXXXXX. These checks prevent duplicates;
+they do not independently verify that a contact's identity or phone ownership is genuine.
+
+Before deploying this schema change to the existing MySQL/TiDB database, back up
+the schema/data and run `npm run db:migrate:kin`. This adds four nullable columns
+without rewriting contact 1 or historical application rows. It is a standalone
+additive migration, not a replacement for the later PostgreSQL migration. Existing
+records show missing contacts as not provided; do not invent or duplicate contacts.
+
+The separate borrower-app source is not in this repository. Its form must send all
+six fields before new applications can open. No contacts are called or messaged by
+this change, and it does not create guarantor obligations.
+
 This is a restricted pilot preparation release, not a functioning lender.
 No public applications, payment fees, disbursements or repayments are enabled.
 The public root shows an honest landing page; the lender dashboard is /dashboard.

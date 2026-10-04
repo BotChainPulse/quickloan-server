@@ -116,7 +116,16 @@ export default function Dashboard() {
               <p><b>Amount:</b> {fmt(d.amount)} for {d.durationWeeks} weeks · <b>Purpose:</b> {d.purpose}</p>
               <p><b>NIN:</b> {d.nin} · <b>DOB:</b> {d.dob} · <b>Gender:</b> {d.gender}</p>
               <p><b>District:</b> {d.district} · <b>Occupation:</b> {d.occupation} · <b>Income:</b> {d.income}</p>
-              <p><b>Next of kin:</b> {d.kinName} ({d.kinPhone})</p>
+              <div className="border rounded-lg p-3 space-y-2">
+                <p className="font-semibold">Next-of-kin contacts</p>
+                {[
+                  { name: d.kinName, phone: d.kinPhone },
+                  { name: d.kinName2, phone: d.kinPhone2 },
+                  { name: d.kinName3, phone: d.kinPhone3 },
+                ].map((contact, index) => <p key={index}>
+                  <b>Contact {index + 1}:</b> {contact.name || "Not provided in this record"}{contact.phone ? ` · ${contact.phone}` : ""}
+                </p>)}
+              </div>
               <p><b>Signature:</b> <i>{d.signature}</i></p>
               <p><b>Applied:</b> {new Date(d.createdAt).toLocaleString()}</p>
             </div>

@@ -17,6 +17,8 @@ describe("borrower API fails closed", () => {
   });
   it("does not accept new applications even for verified borrowers", async () => {
     const caller = quickloanRouter.createCaller({ req, resHeaders: new Headers(), borrower: { id: "b", phone: "+256700000001", phone_confirmed_at: "2026-10-04" } });
-    await expect(caller.submit({ phone: "0700000001", name: "Test only", amount: 20000, durationWeeks: 2 })).rejects.toMatchObject({ code: "SERVICE_UNAVAILABLE" });
+    await expect(caller.submit({ phone: "0700000001", name: "Test only", amount: 20000, durationWeeks: 2,
+      kinName: "Contact One", kinPhone: "0700000002", kinName2: "Contact Two", kinPhone2: "0700000003", kinName3: "Contact Three", kinPhone3: "0700000004",
+    })).rejects.toMatchObject({ code: "SERVICE_UNAVAILABLE" });
   });
 });
