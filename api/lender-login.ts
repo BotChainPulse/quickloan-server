@@ -1,3 +1,5 @@
+import { timingSafeEqual } from "node:crypto";
+import { allowAttempt } from "./borrower-security";
 import type { Context } from "hono";
 import { setCookie } from "hono/cookie";
 import { env } from "./lib/env";
@@ -11,6 +13,12 @@ import { upsertUser } from "./queries/users";
 // uses a private PIN (LENDER_PIN env var) instead. Only the lender needs
 // access; borrower endpoints stay public via phone-keyed queries.
 export async function lenderLoginHandler(c: Context) {
+  const ip = c.req.header("x-forwarded-for")?.split(",")[0] ?? "local";
+  if (!allowAttempt(`lender:${ip}`, 5))
+    return c.json(
+      { error: "Too many attempts. Try again in 15 minutes." },
+      429
+    );
   let pin = "";
   try {
     const body = await c.req.json();
@@ -23,7 +31,13 @@ export async function lenderLoginHandler(c: Context) {
   if (!expected) {
     return c.json({ error: "LENDER_PIN not configured on server" }, 500);
   }
-  if (!pin || pin !== expected) {
+  const supplied = Buffer.from(pin);
+  const stored = Buffer.from(expected);
+  if (
+    !pin ||
+    supplied.length !== stored.length ||
+    !timingSafeEqual(supplied, stored)
+  ) {
     return c.json({ error: "Wrong PIN" }, 401);
   }
 

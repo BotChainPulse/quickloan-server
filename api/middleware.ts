@@ -5,12 +5,21 @@ import type { TrpcContext } from "./context";
 
 const t = initTRPC.context<TrpcContext>().create({
   transformer: superjson,
+  errorFormatter({ shape, error }) {
+    return error.code === "INTERNAL_SERVER_ERROR"
+      ? {
+          ...shape,
+          message: "Service temporarily unavailable. Please try again.",
+          data: { ...shape.data, stack: undefined },
+        }
+      : { ...shape, data: { ...shape.data, stack: undefined } };
+  },
 });
 
 export const createRouter = t.router;
 export const publicQuery = t.procedure;
 
-const requireAuth = t.middleware(async (opts) => {
+const requireAuth = t.middleware(async opts => {
   const { ctx, next } = opts;
 
   if (!ctx.user) {
@@ -24,7 +33,7 @@ const requireAuth = t.middleware(async (opts) => {
 });
 
 function requireRole(role: string) {
-  return t.middleware(async (opts) => {
+  return t.middleware(async opts => {
     const { ctx, next } = opts;
 
     if (!ctx.user || ctx.user.role !== role) {
@@ -40,3 +49,12 @@ function requireRole(role: string) {
 
 export const authedQuery = t.procedure.use(requireAuth);
 export const adminQuery = authedQuery.use(requireRole("admin"));
+
+export const borrowerQuery = t.procedure.use(async ({ ctx, next }) => {
+  if (!ctx.borrower)
+    throw new TRPCError({
+      code: "UNAUTHORIZED",
+      message: "Sign in to your borrower account",
+    });
+  return next({ ctx: { ...ctx, borrower: ctx.borrower } });
+});

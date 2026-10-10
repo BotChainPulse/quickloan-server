@@ -18,7 +18,7 @@ export default function Login() {
         body: JSON.stringify({ pin }),
       });
       if (resp.ok) {
-        window.location.href = "/";
+        window.location.href = "/admin";
         return;
       }
       const data = await resp.json().catch(() => ({}));
@@ -42,8 +42,8 @@ export default function Login() {
             inputMode="numeric"
             placeholder="Enter your lender PIN"
             value={pin}
-            onChange={(e) => setPin(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && submit()}
+            onChange={e => setPin(e.target.value)}
+            onKeyDown={e => e.key === "Enter" && submit()}
           />
           {error && <p className="text-sm text-red-500">{error}</p>}
           <Button

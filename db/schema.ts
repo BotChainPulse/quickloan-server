@@ -58,17 +58,28 @@ export const applications = mysqlTable("applications", {
   purpose: varchar("purpose", { length: 50 }),
   kinName: varchar("kinName", { length: 255 }),
   kinPhone: varchar("kinPhone", { length: 20 }),
+  kin2Name: varchar("kin2Name", { length: 255 }),
+  kin2Phone: varchar("kin2Phone", { length: 20 }),
+  kin3Name: varchar("kin3Name", { length: 255 }),
+  kin3Phone: varchar("kin3Phone", { length: 20 }),
+  borrowerId: bigint("borrowerId", { mode: "number", unsigned: true }),
+  confidentialPayload: longtext("confidentialPayload"),
+  consentVersion: varchar("consentVersion", { length: 32 }),
+  borrowerTokenHash: varchar("borrowerTokenHash", { length: 64 }),
   signature: varchar("signature", { length: 255 }),
   idFrontPhoto: longtext("idFrontPhoto"),
   idBackPhoto: longtext("idBackPhoto"),
   livenessPhoto: longtext("livenessPhoto"),
-  status: mysqlEnum("status", ["pending", "approved", "rejected"]).default("pending").notNull(),
+  status: mysqlEnum("status", ["pending", "approved", "rejected"])
+    .default("pending")
+    .notNull(),
   decisionNote: varchar("decisionNote", { length: 500 }),
   decidedAt: timestamp("decidedAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
 export const notifications = mysqlTable("notifications", {
+  borrowerId: bigint("borrowerId", { mode: "number", unsigned: true }),
   id: serial("id").primaryKey(),
   phone: varchar("phone", { length: 20 }).notNull(),
   title: varchar("title", { length: 255 }).notNull(),
@@ -82,4 +93,30 @@ export const devices = mysqlTable("devices", {
   phone: varchar("phone", { length: 20 }).notNull(),
   fcmToken: varchar("fcmToken", { length: 512 }),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+
+export const borrowerAccounts = mysqlTable("borrower_accounts", {
+  id: serial("id").primaryKey(),
+  phone: varchar("phone", { length: 20 }).notNull().unique(),
+  passwordHash: varchar("passwordHash", { length: 255 }).notNull(),
+  phoneVerified: int("phoneVerified").default(0).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export const borrowerSessions = mysqlTable("borrower_sessions", {
+  tokenHash: varchar("tokenHash", { length: 64 }).primaryKey(),
+  borrowerId: bigint("borrowerId", {
+    mode: "number",
+    unsigned: true,
+  }).notNull(),
+  expiresAt: timestamp("expiresAt").notNull(),
+});
+
+export const borrowerRequests = mysqlTable("borrower_requests", {
+  id: serial("id").primaryKey(),
+  borrowerId: bigint("borrowerId", { mode: "number", unsigned: true })
+    .notNull()
+    .unique(),
+  type: varchar("type", { length: 32 }).notNull(),
+  status: varchar("status", { length: 32 }).default("pending").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
