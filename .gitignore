@@ -17,3 +17,6 @@ coverage/
 .nyc_output/
 # Logs
 *.log
+
+# Rebuilt from source for every deployment
+dist/
